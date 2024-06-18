@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::{
     color::palettes::css::{BLUE, GREEN},
     prelude::*,
@@ -19,11 +17,12 @@ fn main() {
         GizmoConfig {
             render_layers: RenderLayers::layer(1),
             line_width: 40.0,
+            line_joints: GizmoLineJoint::Round(16),
             ..default()
         },
     );
     app.add_systems(Startup, setup);
-    app.add_systems(Update, draw_gizmos);
+    app.add_systems(Update, draw_first_gizmo.pipe(draw_second_gizmo));
     app.run();
 }
 
@@ -90,11 +89,31 @@ pub fn setup(
     });
 }
 
-fn draw_gizmos(mut gizmos: Gizmos, time: Res<Time>, mut drawn: Local<bool>) {
-    if time.elapsed() > Duration::from_secs(3) && !*drawn {
-        info!("Drawn");
-        gizmos.circle_2d(Vec2::new(0.0, 0.0), 30.0, BLUE);
-        gizmos.circle_2d(Vec2::new(0.0, 0.0), 120.0, GREEN);
-        *drawn = true;
+/// For some reason, we need to call gizmo draws for N frames before they actually get drawn.
+///
+/// NOTE: This varies between launches and probably machines too.
+///       Adjust this until the first gizmo changes between being drawn and not being drawn in different executions.
+///       Then it's only a matter of time before you see the segment glitch.
+const DRAW_FOR_N_FRAMES: u64 = 4;
+
+fn draw_first_gizmo(mut gizmos: Gizmos, mut counter: Local<u64>) -> bool {
+    if *counter < DRAW_FOR_N_FRAMES {
+        // 4 things can happen:
+        // - gizmo is not drawn at all - if happens in every execution, increase frames
+        // - gizmo is always drawn correctly - if happens in every execution, decrease frames
+        // - gizmo is missing joings - happens occasionally when frames are just right
+        // - gizmo has joints but no line segments - only happened once for me
+        gizmos.circle_2d(Vec2::new(0.0, 0.0), 100.0, BLUE);
+        *counter += 1;
+        false
+    } else {
+        true
+    }
+}
+
+fn draw_second_gizmo(first_draw_done: In<bool>, mut gizmos: Gizmos) {
+    if *first_draw_done {
+        // Second draw doesn't matter, it's just a reference to how the circle should look like.
+        gizmos.circle_2d(Vec2::new(0.0, 0.0), 200.0, GREEN);
     }
 }
