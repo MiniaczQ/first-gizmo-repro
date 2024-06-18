@@ -96,13 +96,15 @@ pub fn setup(
 ///       Then it's only a matter of time before you see the segment glitch.
 const DRAW_FOR_N_FRAMES: u64 = 4;
 
+/// Four things can happen:
+///  1. gizmo is not drawn at all - if happens in every execution, increase frames
+///  2. gizmo is always drawn correctly - if happens in every execution, decrease frames
+///  3. gizmo has line segments but no joints - happens occasionally when frames are just right
+///  4. gizmo has joints but no line segments - same as above
+///
+/// If you pay close attention, in case (1) you can sometimes see cases (3) and (4) for a single frame.
 fn draw_first_gizmo(mut gizmos: Gizmos, mut counter: Local<u64>) -> bool {
     if *counter < DRAW_FOR_N_FRAMES {
-        // 4 things can happen:
-        // - gizmo is not drawn at all - if happens in every execution, increase frames
-        // - gizmo is always drawn correctly - if happens in every execution, decrease frames
-        // - gizmo is missing joings - happens occasionally when frames are just right
-        // - gizmo has joints but no line segments - only happened once for me
         gizmos.circle_2d(Vec2::new(0.0, 0.0), 100.0, BLUE);
         *counter += 1;
         false
